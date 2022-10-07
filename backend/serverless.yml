@@ -202,8 +202,10 @@ resources:
         CorsConfiguration:
           CorsRules:
             -
-              AllowedOrigins: '*'
-              AllowedHeaders: '*'
+              AllowedOrigins: 
+                - '*'
+              AllowedHeaders: 
+                - '*'
               AllowedMethods:
                 - GET
                 - PUT
