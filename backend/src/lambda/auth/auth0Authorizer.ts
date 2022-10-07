@@ -61,16 +61,8 @@ async function verifyToken(authHeader: string): Promise<JwtPayload> {
   // TODO: Implement token verification
   // You should implement it similarly to how it was implemented for the exercise for the lesson 5
   // You can read more about how to do this here: https://auth0.com/blog/navigating-rs256-and-jwks/
-  const jwksResp = await Axios.get(jwksUrl)
-  const jwks = jwksResp.data
-
-  const jwk = jwks.keys.filter((key) => key.kid == jwt.header.kid)
-
-  if (jwk.length == 1) {
-    return verify(token, certToPEM(jwk[0].x5c[0])) as JwtPayload
-  }
-
-  throw new Error("No key found")
+  const certificate = await getCertificate(jwksUrl, jwt.header.kid)
+  return verify(token, certificate, { algorithms: ['RS256'] }) as JwtPayload
 }
 
 function getToken(authHeader: string): string {
@@ -85,8 +77,17 @@ function getToken(authHeader: string): string {
   return token
 }
 
-function certToPEM(cert: string) {
-  cert = cert.match(/.{1,64}/g).join('\n');
-  cert = `-----BEGIN CERTIFICATE-----\n${cert}\n-----END CERTIFICATE-----\n`;
-  return cert;
+async function getCertificate(jwksUrl: string, kid: string) {
+  try {
+    const response = await Axios.get(jwksUrl);
+    const key = response['data']['keys'][0]['x5c'][0];
+    const cert = `-----BEGIN CERTIFICATE-----\n${key}\n-----END CERTIFICATE-----`;
+    if (response.data.keys[0].kid === kid)
+      return cert;
+    else
+      throw new Error("Failed to get cert");
+  }
+  catch (error) {
+    logger.error('Getting certificate failed', error)
+  }
 }
